@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint --fix . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
+    "lint": "npx eslint \"src/**/*.{ts,js,vue}\"",
+    "lint:fix": "npx eslint \"src/**/*.{ts,js,vue}\" --fix",
     "format": "prettier --write \"src/**/*.{ts,js,vue}\" --ignore-unknown",
     "format:check": "prettier --check \"src/**/*.{ts,js,vue}\" --ignore-unknown",
     "lint-staged": "lint-staged"
