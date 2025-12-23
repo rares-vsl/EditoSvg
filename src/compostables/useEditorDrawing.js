@@ -1,8 +1,6 @@
 import { computed, ref } from "vue";
 
 export function useEditorDrawing() {
-  const isDrawingActive = ref(false);
-  const activeDrawingMode = ref(null);
 
   function isDrawingModeValid(mode) {
     return mode && mode.startDrawing && mode.stopDrawing && mode.handleClick;

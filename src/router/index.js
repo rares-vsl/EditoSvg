@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { createAuthGuard } from "./guards";
+import {createAuthGuard, createOnboardingGuard} from "./guards";
 import { routes } from "./routes";
 
 const router = createRouter({
@@ -12,5 +12,8 @@ const router = createRouter({
 });
 
 router.beforeEach(createAuthGuard);
+router.beforeEach(createOnboardingGuard);
+
+
 
 export default router;

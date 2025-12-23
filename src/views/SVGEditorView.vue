@@ -6,6 +6,7 @@ import {ref} from "vue";
 import ZoneSvg from "@/components/Map/ZoneSvg.vue";
 
 import {ZoneInformation} from "@/compostables/HandleZone.js";
+import {zoneEditor} from "@/compostables/zoneEditor.js";
 
 const svgUrl = new URL("@/assets/floorplan.svg", import.meta.url).href;
 
@@ -138,7 +139,7 @@ const nodes = ref([{
       </floor-plan>
     </div>
     <div class="w-[500px] xl:max-w-[30vw] flex">
-      <Panel header="Floor plan structure" class="h-fit min-h-[200px] w-full">
+      <div class="h-fit min-h-[200px] w-full">
         <p class="m-0">
           Here will be listed your zones
         </p>
@@ -150,7 +151,7 @@ const nodes = ref([{
             </div>
           </template>
         </Tree>
-      </Panel>
+      </div>
     </div>
   </div>
 </template>

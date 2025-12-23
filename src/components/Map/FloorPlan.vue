@@ -1,44 +1,71 @@
 <script setup>
 import {onMounted, ref} from "vue";
 import {getSvgViewBox} from '@/compostables/getSvgViewBox'
-import ZoneSvg from "@/components/Map/ZoneSvg.vue";
+import { provide  } from 'vue';
 
 const props = defineProps({
   floorPlanSvgUrl: {
-    type: String,
-    required: true
+    type: String
+  },
+  floorPlanSvg: {
+    type: String
   },
   cursor: String
 });
 
-const emit = defineEmits(['floorPlanClick'])
+const emit = defineEmits(['floorPlanClick', 'floorPlanMouseMove'])
 const svgRef = ref(null);
 
-const svgClick = (event) => {
+const getSvgPoint = (event) => {
   if (!svgRef.value) return null;
 
   const svg = svgRef.value;
   const pt = svg.createSVGPoint();
-
   pt.x = event.clientX;
   pt.y = event.clientY;
-
   const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
 
-  const point = {x: svgP.x, y: svgP.y};
+  return { x: svgP.x, y: svgP.y };
+};
+
+
+const svgClick = (event) => {
+  if (!svgRef.value) return null;
+
+  const point = getSvgPoint(event);
 
   emit("floorPlanClick", point);
+}
+
+
+const svgMouseMove = (event) => {
+  if (!svgRef.value) return null;
+
+  const point = getSvgPoint(event);
+
+  emit("floorPlanMouseMove", point);
 }
 
 const viewBox = ref(null);
 const svgContent = ref("")
 
 onMounted(async () => {
-  const response = await fetch(props.floorPlanSvgUrl);
-  svgContent.value = await response.text();
-  viewBox.value = getSvgViewBox(svgContent.value);
+  if(props.floorPlanSvgUrl)
+  {
+    const response = await fetch(props.floorPlanSvgUrl);
+    svgContent.value = await response.text();
+    viewBox.value = getSvgViewBox(svgContent.value);
+  }
+  else{
+    svgContent.value = props.floorPlanSvg;
+    viewBox.value = getSvgViewBox(svgContent.value);
+  }
 });
 
+provide('floorPlan', {
+  getSvgPoint,
+  svgRef
+});
 
 </script>
 
@@ -47,10 +74,12 @@ onMounted(async () => {
       ref="svgRef"
       :viewBox="viewBox"
       preserveAspectRatio="xMidYMid meet"
-      class="h-full w-full bg-red-400"
+      class="h-full w-full"
   >
     <g :class="cursor"
-       @click="svgClick">
+       @click="svgClick"
+       @mousemove="svgMouseMove"
+    >
       <g v-html="svgContent"
 
       />
