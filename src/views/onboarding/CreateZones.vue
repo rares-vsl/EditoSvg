@@ -1,186 +1,106 @@
 <script setup>
-import {useOnboardingStore} from '@/stores/onboarding'
-import {InteractiveMapState, useInteractiveMap} from '@/stores/interactiveMap'
+import {computed, onMounted, ref, watch} from "vue"
+import { useConfirm, useToast } from "primevue"
+import Dialog from "primevue/dialog"
 
-import FloorPlan from "@/components/Map/FloorPlan.vue";
-import {computed, onMounted, ref} from "vue";
-import ZoneSvg from "@/components/Map/ZoneSvg.vue";
-import {zoneEditor} from "@/compostables/zoneEditor.js";
-import Dialog from "primevue/dialog";
-import {useConfirm, useToast} from "primevue";
+import { useOnboardingStore } from '@/stores/onboarding'
+import { MapMode, useInteractiveMap } from '@/stores/interactiveMap'
 
+
+import FloorPlan from "@/components/Map/FloorPlan.vue"
+import ZoneSvg from "@/components/Map/ZoneSvg.vue"
+import {useZoneDrawing} from "@/compostables/useZoneDrawing.js";
+import {useZoneDrag} from "@/compostables/useZoneDrag.js";
+
+// Stores
 const onboardingStore = useOnboardingStore()
-const interactiveMapStore = useInteractiveMap()
+const mapStore = useInteractiveMap()
 
+const existingZones = computed(() => mapStore.zones)
 
-const nodes = computed(() => {
-  return interactiveMapStore.getZoneNodes
-})
-
-const floorPlanSvg = computed(() => interactiveMapStore.svgDataUrl);
-
-//
 const {
-  currentPoints,
-  pointConnectors,
-  isZoneCompleted,
-  zoneColor,
-  realZoneColor,
-  currentZone,
-  zoneHandler,
-  isShapeCompleted
-} = zoneEditor()
+  draftZone,
+  colorInput,
+  isPolygonClosed,
+  isDrawing,
+  polygonPath,
+  displayColor,
 
-// EDITOR
+  startDrawing,
+  cancelDrawing,
+  addPoint,
+  finalizeZone,
+  resetDraft,
+  loadZoneForEdit
+} = useZoneDrawing(existingZones)
 
-const isDrawingActive = computed(() => interactiveMapStore.state === InteractiveMapState.DRAW)
-const isEditActive = computed(() => interactiveMapStore.state === InteractiveMapState.EDIT)
-const cursorType = computed(() => {
-  if (!isDrawingActive.value || isZoneCompleted.value)
-    return "cursor-default"
 
-  return "cursor-crosshair"
+const confirm = useConfirm()
+const toast = useToast()
+
+// Dialog state
+const dialogMode = ref(null)
+const showZoneDialog = ref(false)
+
+// Computed
+const cursorStyle = computed(() => {
+  if (mapStore.isDrawMode && !isPolygonClosed.value) {
+    return "cursor-crosshair"
+  }
+  return "cursor-default"
 })
 
-function startDrawing() {
-  interactiveMapStore.startDrawing()
-  zoneHandler.startDrawing()
+
+// ======================
+// Drawing Actions
+// ======================
+
+function onStartDrawing() {
+  mapStore.startDrawing()
+  startDrawing()
+
 }
 
-function startEditing() {
-  interactiveMapStore.startEditing()
+function onCancelDrawing() {
+  mapStore.viewMap()
+  cancelDrawing()
 }
 
-function stopEditing() {
-  interactiveMapStore.viewMap()
+function onCompletePolygon() {
+  dialogMode.value = 'create'
+  showZoneDialog.value = true
 }
 
-function stopDrawing() {
-  interactiveMapStore.viewMap()
-
-  zoneHandler.stopDrawing()
-}
-const showPanel = ref(false);
-function createZone() {
-  showPanel.value = true;
-}
-
-function handleClick(point) {
-  if(isDrawingActive.value)
-    zoneHandler.handleClick(point)
-}
-
-function saveZone(){
-  if (!zoneName.value.trim()) {
-    alert('Please enter a zone name');
-    return;
+function onFloorPlanClick(point) {
+  if (mapStore.isDrawMode) {
+    addPoint(point)
   }
-
-  if (!currentZone.value) {
-    const zone = {
-      id: zoneID.value,
-      name: zoneName.value,
-      color: realZoneColor.value,
-    };
-
-    interactiveMapStore.editZone(zone)
-  }
-  else{
-    const newZone = {
-      name: zoneName.value,
-      ...currentZone.value
-    };
-
-    interactiveMapStore.addZone(newZone)
-    zoneHandler.stopDrawing()
-
-    if (interactiveMapStore.getNumberOfZones === 1)
-      onboardingStore.completeStep()
-  }
-
-
-
-  showPanel.value = false;
-
 }
 
-onMounted(() => {
-  interactiveMapStore.viewMap()
-})
+// ======================
+// Edit Actions
+// ======================
 
-const draggedZone = ref(null);
-const zoneName = ref("");
-const draggedPointIndex = ref(null);
-const dragStartPos = ref(null);
-const isDragging = ref(false);
-
-function handleZoneClick(id, point) {
-  isDragging.value = true;
-  draggedZone.value = id;
-  dragStartPos.value = point
-  console.log("handleZoneClick", id, point)
+function onStartEditing() {
+  mapStore.startEditing()
 }
 
-function handleMouseMove(point)  {
-  if (!isDragging.value || !draggedZone.value || !dragStartPos.value) return;
-
-  const currentPos = point;
-  if (!currentPos) return;
-
-  const dx = currentPos.x - dragStartPos.value.x;
-  const dy = currentPos.y - dragStartPos.value.y;
-
-  if (draggedPointIndex.value !== null) {
-    // Move single point
-
-    draggedZone.value.points[draggedPointIndex.value].x += dx;
-    draggedZone.value.points[draggedPointIndex.value].y += dy;
-  } else {
-    // Move entire zone
-    draggedZone.value.points.forEach(point => {
-      point.x += dx;
-      point.y += dy;
-    });
-  }
-
-  dragStartPos.value = currentPos;
-};
-
-const handleMouseUp = () => {
-  isDragging.value = false;
-  draggedZone.value = null;
-  draggedPointIndex.value = null;
-  dragStartPos.value = null;
-};
-
-function handleZoneVerticeClick(id, verticle, point) {
-  isDragging.value = true;
-  draggedZone.value = id;
-  draggedPointIndex.value = verticle;
-  dragStartPos.value = point
-  console.log("zoneVerticeClick", id, verticle, point)
+function onStopEditing() {
+  mapStore.viewMap()
 }
 
-const thereAreZone = computed(() => {
-  return interactiveMapStore.hasZones;
-})
+function onEditZone(zoneId) {
+  const zone = mapStore.findZone(zoneId)
+  if (!zone) return
 
-const zoneID = ref(null)
-
-function edit(id){
-  const zone = interactiveMapStore.getZone(id)
-  zoneID.value = id
-  zoneName.value = zone.name
-  zoneColor.value = zone.color
-  showPanel.value = true
-
+  loadZoneForEdit(zone)
+  dialogMode.value = 'edit'
+  showZoneDialog.value = true
 }
-const confirm = useConfirm();
-const toast = useToast();
 
-const deleteZone  = (id) => {
+function onDeleteZone(zoneId) {
   confirm.require({
-    message: 'Do you want to delete this zone?',
+    message: 'Are you sure you want to delete this zone?',
     header: 'Delete Zone',
     icon: 'pi pi-info-circle',
     rejectLabel: 'Cancel',
@@ -194,17 +114,95 @@ const deleteZone  = (id) => {
       severity: 'danger'
     },
     accept: () => {
-      interactiveMapStore.deleteZone(id)
-      if (interactiveMapStore.getNumberOfZones === 0)
+      mapStore.deleteZone(zoneId)
+
+      if (mapStore.zoneCount === 0) {
         onboardingStore.uncompleteStep()
-      toast.add({ severity: 'info', summary: 'Confirmed', detail: 'Record deleted', life: 3000 });
-    },
-    reject: () => {
+      }
+
+      toast.add({
+        severity: 'info',
+        summary: 'Deleted',
+        detail: 'Zone deleted successfully',
+        life: 3000
+      })
     }
-  });
+  })
+}
+
+// ======================
+// Dialog Actions
+// ======================
+
+function onSaveZone() {
+  const name = draftZone.value.name.trim()
+
+  if (!name) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Validation Error',
+      detail: 'Please enter a zone name',
+      life: 3000
+    })
+    return
+  }
+
+  if (dialogMode.value === 'create') {
+    const newZone = finalizeZone()
+    mapStore.addZone(newZone)
+
+    // Complete onboarding step if first zone
+    if (mapStore.zoneCount === 1) {
+      onboardingStore.completeStep()
+    }
+
+    cancelDrawing()
+    mapStore.viewMap()
+
+  } else if (dialogMode.value === 'edit') {
+    mapStore.updateZone(draftZone.value.id, {
+      name: name,
+      color: displayColor.value
+    })
+
+    resetDraft()
+  }
+
+  showZoneDialog.value = false
+  dialogMode.value = null
 }
 
 
+// ======================
+// Drag Actions
+// ======================
+
+const {
+      startDragZone,
+      startDragVertex,
+      handleDragMove,
+      stopDrag,
+      dragCollisionError
+} = useZoneDrag(existingZones)
+
+watch(() => dragCollisionError, (error) => {
+  if (error){
+    toast.add({
+      severity: 'error',
+      summary: 'Collision error',
+      detail: 'Ops',
+      life: 3000
+    })
+  }
+})
+
+// ======================
+// Lifecycle
+// ======================
+
+onMounted(() => {
+  mapStore.viewMap()
+})
 </script>
 
 <template>
@@ -212,88 +210,149 @@ const deleteZone  = (id) => {
     <div class="p-card-title">Create zones</div>
     <div class="p-card-subtitle">Draw polygons on the floor plan</div>
   </div>
-  <div class="flex justify-center flex-1 ">
+
+  <div class="flex justify-center flex-1">
     <div class="p-4 md:p-8 w-full lg:w-[1600px] flex flex-col justify-center items-center">
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 w-full">
+
+        <!-- Main Map Area -->
         <div class="lg:col-span-3">
           <div class="flex flex-col items-center space-y-4 w-full">
+
+            <!-- Action Buttons -->
             <div class="flex justify-start border rounded-lg p-4 w-full space-x-3">
-              <Button v-if="!isDrawingActive && !isEditActive" label="Create new zone" severity="success"
-                      @click="startDrawing"/>
-              <Button v-if="isDrawingActive" label="Done" severity="secondary"
-                      @click="stopDrawing"/>
+              <!-- View Mode Buttons -->
+              <template v-if="mapStore.isViewMode">
+                <Button
+                    label="Create New Zone"
+                    severity="success"
+                    @click="onStartDrawing"
+                />
+                <Button
+                    label="Edit Zones"
+                    severity="success"
+                    :disabled="!mapStore.hasZones"
+                    @click="onStartEditing"
+                />
+              </template>
 
-              <Button v-if="isZoneCompleted" label="Done" severity="success"
-                      @click="createZone"/>
+              <!-- Draw Mode Buttons -->
+              <template v-if="mapStore.isDrawMode">
+                <Button
+                    label="Cancel"
+                    severity="secondary"
+                    @click="onCancelDrawing"
+                />
+                <Button
+                    v-if="isDrawing && isPolygonClosed"
+                    label="Set Name & Color"
+                    severity="success"
+                    @click="onCompletePolygon"
+                />
+              </template>
 
-              <Button v-if="!isDrawingActive && !isEditActive" label="Edit map" severity="success" :disabled="!thereAreZone"
-                      @click="startEditing"/>
-              <Button v-if="isEditActive" label="Done" severity="success"
-                      @click="stopEditing"/>
+              <!-- Edit Mode Buttons -->
+              <template v-if="mapStore.isEditMode">
+                <Button
+                    label="Done Editing"
+                    severity="success"
+                    @click="onStopEditing"
+                />
+              </template>
             </div>
-            <Dialog v-model:visible="showPanel" modal :header="currentZone ? 'Create new zone' : 'Edit Zone'" :style="{ width: '25rem' }">
-              <span class="text-surface-500 dark:text-surface-400 block mb-8">Zone information</span>
-              <div class="flex items-center gap-4 mb-4">
-                <label for="username" class="font-semibold w-24">Zone Name</label>
-                <InputText id="username" class="flex-auto" autocomplete="off" v-model="zoneName" />
-              </div>
-              <div class="flex items-center gap-4 mb-8">
-                <label for="colorZone" class="font-semibold w-24">Color</label>
-                <ColorPicker inputId="colorZone" name="colorZone" v-model="zoneColor" format="hex" pt:root:class=" flex-1 flex"
-                             pt:preview:class="flex-1 !h-8 !w-full"/>
-              </div>
-              <div class="flex justify-end gap-2">
-                <Button type="button" label="Cancel" severity="secondary" @click="showPanel = false"></Button>
-                <Button type="button" label="Save" @click="saveZone"></Button>
-              </div>
-            </Dialog>
-            <ConfirmDialog></ConfirmDialog>
-            <Toast />
+
+            <!-- Floor Plan with Zones -->
             <floor-plan
-                :floor-plan-svg="floorPlanSvg"
-                v-on:floorPlanClick="handleClick"
-                :cursor="cursorType"
-                v-on:floorPlanMouseMove="handleMouseMove"
-                @mouseup="handleMouseUp"
-                @mouseleave="handleMouseUp"
+                :floor-plan-svg="mapStore.svgDataUrl"
+                :cursor="cursorStyle"
+                @floorPlanClick="onFloorPlanClick"
+                @floorPlanMouseMove="handleDragMove"
+                @mouseup="stopDrag"
+                @mouseleave="stopDrag"
             >
-              <g v-if="isDrawingActive && !isZoneCompleted">
+              <!-- Drawing Mode: Show draft polygon -->
+              <g v-if="mapStore.isDrawMode && !isPolygonClosed">
                 <polyline
-                    :points="pointConnectors.join(' ')"
+                    :points="polygonPath"
                     fill="none"
-                    :stroke="realZoneColor"
+                    :stroke="displayColor"
                     stroke-width="6"
                     stroke-dasharray="16"
                 />
                 <circle
-                    v-for="(point, i) in currentPoints"
+                    v-for="(point, i) in draftZone.points"
                     :key="i"
                     :cx="point.x"
                     :cy="point.y"
                     r="10"
-                    :fill="realZoneColor"
+                    :fill="displayColor"
                 />
               </g>
-              <zone-svg v-if="isZoneCompleted" :zone="currentZone" :editModeActive="isZoneCompleted"
-                        v-on:zoneClick="handleZoneClick" v-on:zoneVerticeClick="handleZoneVerticeClick"/>
-              <zone-svg v-for="zone in interactiveMapStore.zones" :zone="zone" :editModeActive="isEditActive"
-                        v-on:zoneClick="handleZoneClick" v-on:zoneVerticeClick="handleZoneVerticeClick"/>
+
+              <!-- Drawing Mode: Show completed draft zone -->
+              <zone-svg
+                  v-if="mapStore.isDrawMode && isPolygonClosed && isDrawing"
+                  :zone="draftZone"
+                  :editModeActive="isPolygonClosed"
+                  @zoneClick="startDragZone" @zoneVerticeClick="startDragVertex"
+              />
+
+              <!-- View/Edit Mode: Show saved zones -->
+              <zone-svg
+                  v-for="zone in mapStore.zones"
+                  :key="zone.id"
+                  :zone="zone"
+                  :editModeActive="mapStore.isEditMode"
+                  @zoneClick="startDragZone" @zoneVerticeClick="startDragVertex"
+              />
             </floor-plan>
           </div>
         </div>
+
+        <!-- Sidebar: Zone List -->
         <div class="lg:col-span-1 space-y-6 border rounded-lg p-4">
-          <h5>Floor plan structure</h5>
+          <h5>Floor Plan Zones</h5>
           <p class="m-0 text-gray-600">
-            Here will be listed your zones
+            {{ mapStore.hasZones ? 'Manage your zones below' : 'No zones created yet' }}
           </p>
-          <Tree :value="nodes" class="!p-0 !m-0"
-                selectionMode="single">
+
+          <Tree
+              v-if="mapStore.hasZones"
+              :value="mapStore.zoneTreeNodes"
+              class="!p-0 !m-0"
+              selectionMode="single"
+              :pt="{
+                nodeLabel: {
+                  class: '!w-full'
+                },
+              }"
+          >
             <template #default="slotProps">
-              <div class="flex flex-row space-x-2 items-center !w-full flex-1">
-                <div class="h-4 w-4 rounded-sm" :style="`background-color: ${slotProps.node.color}`"></div>
-                <b>{{ slotProps.node.label }}</b>
-                <Button icon="pi pi-pen-to-square" variant="text" rounded aria-label="Edit" @click="edit(slotProps.node.id)" />
-                <Button icon="pi pi-trash" severity="danger" variant="text" rounded aria-label="Delete" @click="deleteZone(slotProps.node.id)" />
+              <div class="flex flex-row space-x-2 justify-between items-center flex-1">
+                <div class="flex flex-row space-x-2 items-center">
+                  <div
+                      class="h-4 w-4 rounded-sm "
+                      :style="`background-color: ${slotProps.node.color}`"
+                  />
+                  <b>{{ slotProps.node.label }}</b>
+                </div>
+                <div class="flex flex-row bg-yellow-100">
+                  <Button
+                      icon="pi pi-pen-to-square"
+                      variant="text"
+                      rounded
+                      aria-label="Edit"
+                      @click="onEditZone(slotProps.node.id)"
+                  />
+                  <Button
+                      icon="pi pi-trash"
+                      severity="danger"
+                      variant="text"
+                      rounded
+                      aria-label="Delete"
+                      @click="onDeleteZone(slotProps.node.id)"
+                  />
+                </div>
               </div>
             </template>
           </Tree>
@@ -301,6 +360,60 @@ const deleteZone  = (id) => {
       </div>
     </div>
   </div>
+
+  <!-- Zone Information Dialog -->
+  <Dialog
+      v-model:visible="showZoneDialog"
+      modal
+      :header="dialogMode === 'create' ? 'Create New Zone' : 'Edit Zone'"
+      :style="{ width: '25rem' }"
+  >
+    <span class="text-surface-500 dark:text-surface-400 block mb-8">
+      Zone Information
+    </span>
+
+    <div class="flex items-center gap-4 mb-4">
+      <label for="zoneName" class="font-semibold">Name</label>
+      <div class="flex flex-col gap-1 w-full">
+      <InputText
+          id="zoneName"
+          class="flex-auto"
+          autocomplete="off"
+          v-model="draftZone.name"
+          :invalid="!draftZone.name"
+      />
+      <Message v-show="!draftZone.name" severity="error" variant="simple" size="small">Zone name is required</Message>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4 mb-4">
+      <label for="zoneColor" class="font-semibold">Color</label>
+      <ColorPicker
+          inputId="zoneColor"
+          v-model="colorInput"
+          format="hex"
+          pt:root:class="flex-1 flex !w-full"
+          pt:preview:class="flex-1 !h-8 !w-full"
+      />
+    </div>
+
+    <div class="flex justify-end gap-2">
+      <Button
+          type="button"
+          label="Cancel"
+          severity="secondary"
+          @click="showZoneDialog = false"
+      />
+      <Button
+          type="button"
+          label="Save"
+          @click="onSaveZone"
+      />
+    </div>
+  </Dialog>
+
+  <ConfirmDialog />
+  <Toast />
 </template>
 
 <style scoped>

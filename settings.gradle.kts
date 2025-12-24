@@ -4,9 +4,6 @@ plugins {
 }
 
 gitHooks {
-    preCommit {
-        tasks("preCommit")
-    }
     commitMsg {
         conventionalCommits()
     }

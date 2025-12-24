@@ -6,7 +6,7 @@ import {ref} from "vue";
 import ZoneSvg from "@/components/Map/ZoneSvg.vue";
 
 import {ZoneInformation} from "@/compostables/HandleZone.js";
-import {zoneEditor} from "@/compostables/zoneEditor.js";
+import {zoneManager} from "@/compostables/zoneManager.js";
 
 const svgUrl = new URL("@/assets/floorplan.svg", import.meta.url).href;
 
@@ -73,7 +73,7 @@ const {
   currentZone,
   zoneHandler,
   isShapeCompleted
-} = zoneEditor()
+} = zoneManager()
 
 const {
   showZoneInfoPanel,
@@ -109,7 +109,7 @@ const nodes = ref([{
   <div class="flex justify-center flex-1 space-x-12">
     <div class="w-full xl:max-w-[50vw]  max-h-[1000px] flex flex-col space-y-2">
       <div class="flex flex-row space-x-2 border rounded-lg p-4">
-        <draw-polygons-button v-if="!isDrawingActive" label="Create new zone" :disabled="isDrawingActive"
+        <draw-polygons-button v-if="!isDrawingActive" label="Create new newZone" :disabled="isDrawingActive"
                               @click="() => startDrawing(zoneHandler)"/>
         <draw-polygons-button v-if="isDrawingActive" label="Finish drawing" :disabled="!isShapeCompleted"
                               @click="showZoneInformation"/>
@@ -135,7 +135,7 @@ const nodes = ref([{
           />
         </g>
         <zone-svg v-if="isZoneCompleted" :zone="currentZone"/>
-        <zone-svg v-for="zone in zones" :zone="zone"/>
+        <zone-svg v-for="newZone in zones" :zone="zone"/>
       </floor-plan>
     </div>
     <div class="w-[500px] xl:max-w-[30vw] flex">

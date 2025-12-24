@@ -129,7 +129,7 @@ const findNearbyPoint = (point) => {
 const finishDrawing = () => {
 
   if (currentPoints.value.length < 3) {
-    alert('A zone must have at least 3 points');
+    alert('A newZone must have at least 3 points');
     return;
   }
   showPanel.value = true;
@@ -137,7 +137,7 @@ const finishDrawing = () => {
 
 const saveZone = () => {
   if (!zoneName.value.trim()) {
-    alert('Please enter a zone name');
+    alert('Please enter a newZone name');
     return;
   }
 
@@ -169,12 +169,12 @@ const draggedPointIndex = ref(null);
 const dragStartPos = ref(null);
 const isDragging = ref(false);
 
-const handleMouseDown = (event, zone, pointIndex = null) => {
+const handleMouseDown = (event, newZone, pointIndex = null) => {
   if (!editMode.value) return;
 
   event.stopPropagation();
   isDragging.value = true;
-  draggedZone.value = zone;
+  draggedZone.value = newZone;
   draggedPointIndex.value = pointIndex;
   dragStartPos.value = getSvgPoint(event);
 };
@@ -193,7 +193,7 @@ const handleMouseMove = (event) => {
     draggedZone.value.points[draggedPointIndex.value].x += dx;
     draggedZone.value.points[draggedPointIndex.value].y += dy;
   } else {
-    // Move entire zone
+    // Move entire newZone
     draggedZone.value.points.forEach(point => {
       point.x += dx;
       point.y += dy;
@@ -223,14 +223,14 @@ const abc = ref();
 
 const items = ref([
   {
-    label: 'Edit zone',
+    label: 'Edit newZone',
     icon: 'pi pi-pen-to-square',
     command: () => {
       showPanel.value = true
     }
   },
   {
-    label: 'Delete zone',
+    label: 'Delete newZone',
     icon: 'pi pi-trash',
     command: () => {
       console.log('delete');
@@ -277,13 +277,13 @@ onMounted(() => {
       <div class="flex-1 flex flex-col">
         <div class="flex flex-row space-x-2">
 
-          <Button @click="startDrawing" label="Create a new zone" :disabled="isDrawing || editMode " severity="success" />
+          <Button @click="startDrawing" label="Create a new newZone" :disabled="isDrawing || editMode " severity="success" />
           <Button v-if="isDrawing" @click="finishDrawing" label="Finish drawing" severity="secondary" />
           <Button v-if="isDrawing" @click="isDrawing = false" label="Cancel" severity="secondary" />
 
           <Button v-if="!isDrawing" @click="startEdit" :label="editMode ? 'Exit Edit Mode': 'Edit the map'" :disabled="isDrawing || zones.length === 0" :severity="editMode ? 'info' : 'success' " />
 
-          <Dialog v-model:visible="showPanel" modal header="Create new zone" :style="{ width: '25rem' }">
+          <Dialog v-model:visible="showPanel" modal header="Create new newZone" :style="{ width: '25rem' }">
             <span class="text-surface-500 dark:text-surface-400 block mb-8">Zone information</span>
             <div class="flex items-center gap-4 mb-4">
               <label for="username" class="font-semibold w-24">Zone Name</label>
@@ -317,7 +317,7 @@ onMounted(() => {
 
             </g>
 
-            <!-- Editor: show zone structure  -->
+            <!-- Editor: show newZone structure  -->
             <g v-if="isDrawing && currentPoints.length > 0">
               <polyline
                   :points="lines.join(' ')"
@@ -338,43 +338,43 @@ onMounted(() => {
             <!--      end      -->
             <!-- show zones -->
             <g
-                v-for="zone in zones"
-                :key="zone.id"
-                @mousedown="editMode ? handleMouseDown($event, zone) : null"
-                @contextmenu="handleZoneRightClick($event, zone.id)"
+                v-for="newZone in zones"
+                :key="newZone.id"
+                @mousedown="editMode ? handleMouseDown($event, newZone) : null"
+                @contextmenu="handleZoneRightClick($event, newZone.id)"
                 :style="{ cursor: editMode ? 'move' : 'pointer' }"
             >
               <path
-                  :d="pointsToPath(zone.points)"
-                  :fill="'#'+zone.color"
+                  :d="pointsToPath(newZone.points)"
+                  :fill="'#'+newZone.color"
                   fill-opacity="0.4"
-                  :stroke="'#'+zone.color"
+                  :stroke="'#'+newZone.color"
                   stroke-width="2"
               />
               <g v-if="editMode">
                 <circle
-                    v-for="(point, i) in zone.points"
+                    v-for="(point, i) in newZone.points"
                     :key="i"
                     :cx="point.x"
                     :cy="point.y"
                     r="12"
-                    :fill="'#'+zone.color"
+                    :fill="'#'+newZone.color"
                     stroke="white"
                     stroke-width="3"
                     style="cursor: pointer"
-                    @mousedown="handleMouseDown($event, zone, i)"
+                    @mousedown="handleMouseDown($event, newZone, i)"
                 />
               </g>
               <text
-                  :x="zone.points.reduce((sum, p) => sum + p.x, 0) / zone.points.length"
-                  :y="zone.points.reduce((sum, p) => sum + p.y, 0) / zone.points.length"
+                  :x="newZone.points.reduce((sum, p) => sum + p.x, 0) / newZone.points.length"
+                  :y="newZone.points.reduce((sum, p) => sum + p.y, 0) / newZone.points.length"
                   text-anchor="middle"
                   fill="#000"
                   font-size="28"
                   font-weight="bold"
                   pointer-events="none"
               >
-                {{ zone.id}}
+                {{ newZone.id}}
               </text>
             </g>
 

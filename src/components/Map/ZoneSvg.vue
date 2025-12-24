@@ -6,7 +6,7 @@ const props = defineProps({
   },
   editModeActive: Boolean,
 })
-import { inject } from 'vue';
+import {computed, inject} from 'vue';
 const floorPlan = inject('floorPlan');
 
 const emit = defineEmits(['zoneClick', 'zoneVerticeClick'])
@@ -18,7 +18,7 @@ const pointsToPath = (points) => {
 
 const zoneClick = (event, zoneID, pointID = null) => {
   console.log(pointID);
-  //console.log(props.editModeActive);
+
   if (!props.editModeActive) return;
 
   event.stopPropagation();
@@ -39,43 +39,42 @@ const zoneClick = (event, zoneID, pointID = null) => {
 
 <template>
   <g
-      :key="zone.id"
-      @mousedown="props.editModeActive ? zoneClick($event, zone) : null"
+      @mousedown="props.editModeActive ? zoneClick($event, props.zone) : null"
       :class="{'cursor-move': props.editModeActive}">
     <path
         :d="pointsToPath(props.zone.points)"
-        :fill="zone.color"
+        :fill="props.zone.color"
         fill-opacity="0.4"
-        :stroke="zone.color"
+        :stroke="props.zone.color"
         stroke-width="2"
     />
 
     <g v-if="props.editModeActive">
       <circle
-          v-for="(point, i) in zone.points"
+          v-for="(point, i) in props.zone.points"
           :key="i"
           :cx="point.x"
           :cy="point.y"
-          r="15"
-          :fill="zone.color"
+          r="12"
+          :fill="props.zone.color"
           stroke="white"
           stroke-width="3"
           style="cursor: pointer"
-          @mousedown="zoneClick($event, zone, i)"
+          @mousedown="zoneClick($event, props.zone, i)"
       />
     </g>
 
 
     <text
-        :x="zone.points.reduce((sum, p) => sum + p.x, 0) / zone.points.length"
-        :y="zone.points.reduce((sum, p) => sum + p.y, 0) / zone.points.length"
+        :x="props.zone.points.reduce((sum, p) => sum + p.x, 0) / props.zone.points.length"
+        :y="props.zone.points.reduce((sum, p) => sum + p.y, 0) / props.zone.points.length"
         text-anchor="middle"
         fill="#000"
         font-size="28"
         font-weight="bold"
         pointer-events="none"
     >
-      {{ zone.name }}
+      {{ props.zone.name }}
     </text>
   </g>
 </template>
