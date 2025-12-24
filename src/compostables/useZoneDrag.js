@@ -61,7 +61,6 @@ export function useZoneDrag(existingZones) {
         }
 
         if (!validation.valid) {
-            dragCollisionError.value = validation.reason
             return
         }
 
@@ -87,8 +86,6 @@ export function useZoneDrag(existingZones) {
             vertexIndex: null,
             startPosition: null
         }
-
-        dragCollisionError.value = null
     }
 
     return {

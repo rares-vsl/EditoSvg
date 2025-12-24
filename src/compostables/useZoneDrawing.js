@@ -16,7 +16,8 @@ export function useZoneDrawing(existingZones) {
 
     const colorInput =  ref("3b82f6")
 
-    // Computed polygon path for SVG polyline
+    const collisionError = ref(null)
+
     const polygonPath = computed(() =>
         draftZone.value.points.map(p => `${p.x},${p.y}`).join(' ')
     )
@@ -44,7 +45,8 @@ export function useZoneDrawing(existingZones) {
             existingZones.value
         )
         if (!pointValidation.valid) {
-            console.log(pointValidation.reason)
+            console.log("collision error")
+            collisionError.value = pointValidation.reason
             return
         }
 
@@ -57,7 +59,8 @@ export function useZoneDrawing(existingZones) {
             )
 
             if (!zoneValidation.valid) {
-                console.log(zoneValidation.reason)
+                console.log("collision error")
+                collisionError.value = zoneValidation.reason
                 return
             }
 
@@ -97,6 +100,7 @@ export function useZoneDrawing(existingZones) {
         }
         colorInput.value =  "3b82f6"
         isPolygonClosed.value = false
+        collisionError.value = null
     }
 
     function loadZoneForEdit(zone) {
@@ -119,6 +123,7 @@ export function useZoneDrawing(existingZones) {
         isDrawing,
         polygonPath,
         displayColor,
+        collisionError,
 
         // Actions
         startDrawing,

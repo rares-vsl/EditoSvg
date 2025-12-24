@@ -181,7 +181,7 @@ export function useZoneCollision() {
     /**
      * Validate if a zone can be moved to a new position
      */
-    export function canMoveZone(zone, dx, dy, existingZones) {
+    function canMoveZone(zone, dx, dy, existingZones) {
         const movedPoints = zone.points.map(p => ({
             x: p.x + dx,
             y: p.y + dy
@@ -193,7 +193,7 @@ export function useZoneCollision() {
     /**
      * Validate if a single vertex can be moved
      */
-    export function canMoveVertex(zone, vertexIndex, newPosition, existingZones) {
+    function canMoveVertex(zone, vertexIndex, newPosition, existingZones) {
         const movedPoints = zone.points.map((p, i) =>
             i === vertexIndex ? { ...newPosition } : { ...p }
         )

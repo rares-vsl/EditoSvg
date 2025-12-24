@@ -25,6 +25,7 @@ const {
   isDrawing,
   polygonPath,
   displayColor,
+  collisionError,
 
   startDrawing,
   cancelDrawing,
@@ -181,19 +182,19 @@ const {
       startDragZone,
       startDragVertex,
       handleDragMove,
-      stopDrag,
-      dragCollisionError
+      stopDrag
 } = useZoneDrag(existingZones)
 
-watch(() => dragCollisionError, (error) => {
+watch(collisionError, (error) => {
   if (error){
     toast.add({
       severity: 'error',
       summary: 'Collision error',
-      detail: 'Ops',
-      life: 3000
+      detail: error,
+      life: 2000
     })
   }
+  collisionError.value = null
 })
 
 // ======================
