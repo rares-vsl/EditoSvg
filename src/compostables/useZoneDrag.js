@@ -2,7 +2,6 @@ import { ref } from 'vue'
 import {useZoneCollision} from "@/compostables/useZoneCollision.js";
 
 export function useZoneDrag(existingZones) {
-    const dragCollisionError = ref(null)
 
     const dragState = ref({
         isDragging: false,
@@ -10,6 +9,8 @@ export function useZoneDrag(existingZones) {
         vertexIndex: null,
         startPosition: null
     })
+
+    const collision = useZoneCollision()
 
     function startDragZone(zone, position) {
         dragState.value = {
@@ -28,7 +29,7 @@ export function useZoneDrag(existingZones) {
             startPosition: { ...position }
         }
     }
-    const collision = useZoneCollision()
+
     function handleDragMove(currentPosition) {
         if (!dragState.value.isDragging || !dragState.value.startPosition) {
             return

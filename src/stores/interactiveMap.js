@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import {UtilityType} from "@/compostables/UtilityType.js";
 
 export const MapMode ={
     VIEW: "view",
@@ -58,6 +59,32 @@ export const useInteractiveMap = defineStore('interactiveMap', {
                 ],
                 "color": "#3b82f6"
             }
+        ],
+        smartFurnitureHookups: [
+            {
+                "id": 0,
+                "name": "fridge",
+                "position": {
+                    "x": 830.5523681640625,
+                    "y": 300.3343505859375
+                },
+                "utilityType": UtilityType.ELECTRICITY,
+                "zone": 0,
+                "isActive": false
+            },
+
+            {
+                "id": 1,
+                "name": "pc",
+                "position": {
+                    "x": 830.5523681640625,
+                    "y": 600.3343505859375
+                },
+                "utilityType": UtilityType.ELECTRICITY,
+                "zone": null,
+                "isActive": false
+            }
+
         ]
     }),
     getters: {
@@ -66,11 +93,11 @@ export const useInteractiveMap = defineStore('interactiveMap', {
                 key: index,
                 label: zone.name,
                 color: zone.color,
-                id: zone.id
+                id: zone.id,
             }))
         },
-
         hasZones: (state) => state.zones.length > 0,
+        hasSmartFurnitureHookups: (state) => state.smartFurnitureHookups.length > 0,
         zoneCount: (state) => state.zones.length,
         isViewMode: (state) => state.mode === MapMode.VIEW,
         isDrawMode: (state) => state.mode === MapMode.DRAW,
@@ -105,6 +132,9 @@ export const useInteractiveMap = defineStore('interactiveMap', {
         },
         deleteZone(id) {
             this.zones = this.zones.filter(zone => zone.id !== id)
+        },
+        addSmartFurnitureHookup(smartFurnitureHookup) {
+            this.smartFurnitureHookups.push(smartFurnitureHookup)
         }
     },
     persist: true

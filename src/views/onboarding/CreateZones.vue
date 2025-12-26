@@ -4,7 +4,7 @@ import { useConfirm, useToast } from "primevue"
 import Dialog from "primevue/dialog"
 
 import { useOnboardingStore } from '@/stores/onboarding'
-import { MapMode, useInteractiveMap } from '@/stores/interactiveMap'
+import { useInteractiveMap } from '@/stores/interactiveMap'
 
 
 import FloorPlan from "@/components/Map/FloorPlan.vue"
@@ -59,7 +59,6 @@ const cursorStyle = computed(() => {
 function onStartDrawing() {
   mapStore.startDrawing()
   startDrawing()
-
 }
 
 function onCancelDrawing() {
@@ -158,8 +157,6 @@ function onSaveZone() {
     }
 
     cancelDrawing()
-    mapStore.viewMap()
-
   } else if (dialogMode.value === 'edit') {
     mapStore.updateZone(draftZone.value.id, {
       name: name,

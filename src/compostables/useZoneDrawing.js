@@ -59,7 +59,6 @@ export function useZoneDrawing(existingZones) {
             )
 
             if (!zoneValidation.valid) {
-                console.log("collision error")
                 collisionError.value = zoneValidation.reason
                 return
             }
@@ -85,7 +84,7 @@ export function useZoneDrawing(existingZones) {
     function finalizeZone() {
         return {
             id: Date.now().toString(),
-            name: draftZone.value.name,
+            name: draftZone.value.name.trim(),
             points: [...draftZone.value.points],
             color: displayColor.value,
         }

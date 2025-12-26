@@ -6,7 +6,7 @@ const props = defineProps({
   },
   editModeActive: Boolean,
 })
-import {computed, inject} from 'vue';
+import {inject} from 'vue';
 const floorPlan = inject('floorPlan');
 
 const emit = defineEmits(['zoneClick', 'zoneVerticeClick'])
@@ -16,22 +16,18 @@ const pointsToPath = (points) => {
   return `M ${points.map(p => `${p.x},${p.y}`).join(' L ')} Z`;
 };
 
-const zoneClick = (event, zoneID, pointID = null) => {
-  console.log(pointID);
-
+const zoneClick = (event, zone, pointID = null) => {
   if (!props.editModeActive) return;
 
   event.stopPropagation();
   const p = floorPlan.getSvgPoint(event);
 
   if(pointID != null){
-    console.log("emit zoneVerticeClick");
-    emit('zoneVerticeClick', zoneID, pointID, p);
+    emit('zoneVerticeClick', zone, pointID, p);
     return;
   }
 
-  console.log("emit zoneClick");
-  emit('zoneClick', zoneID, p);
+  emit('zoneClick', zone, p);
 
 }
 
