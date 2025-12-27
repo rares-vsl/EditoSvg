@@ -10,9 +10,10 @@ import SmartFurnitureHookup from "@/components/Map/SmartFurnitureHookup.vue";
 import {useSmartFurnitureHookupDrawing} from "@/compostables/useSmartFurnitureHookupDrawing.js"
 import Dialog from "primevue/dialog";
 import axios from 'axios';
-import { useConfirm, useToast } from "primevue"
+import {useConfirm, useToast} from "primevue"
 import smartFurnitureHookup from "@/components/Map/SmartFurnitureHookup.vue";
 import {useHookupZoneDetection} from "@/compostables/useHookupZoneDetection.js";
+import {useFloorPlanTree} from "@/compostables/floorPlanTree.js";
 
 // Stores
 const onboardingStore = useOnboardingStore()
@@ -26,45 +27,12 @@ const cursorStyle = computed(() => {
   return "cursor-default"
 })
 
-function useFloorPlanTree(zones, smartFurnitureHookups) {
-
-  const zoneNodes = zones.map((zone, index) => ({
-    key: index + 1,
-    label: zone.name,
-    color: zone.color,
-    id: zone.id,
-    type: "zone",
-    children: smartFurnitureHookups
-        .filter((sfh) => sfh.zone === zone.id)
-        .map((sfh, i) => ({
-          key: `${index + 1}-${i}`,
-          id: sfh.id,
-          label: sfh.name,
-          isActive: sfh.isActive,
-          type: "smart-furniture-hookup",
-        }))
-  }));
-
-  zoneNodes.unshift({
-    key: 0,
-    label: "Floor plan",
-    children: smartFurnitureHookups
-        .filter((sfh) => sfh.zone === null)
-        .map((sfh, i) => ({
-          key: `${0}-${i}`,
-          id: sfh.id,
-          label: sfh.name,
-          isActive: sfh.isActive,
-          type: "smart-furniture-hookup",
-        })),
-  })
-
-  return zoneNodes
-}
 
 const tree = computed(() =>
     useFloorPlanTree(mapStore.zones, mapStore.smartFurnitureHookups)
 );
+
+const expandedKeys = computed(() => Object.fromEntries(tree.value.map(node => [node.key, true])));
 
 function zoneInfo(zone) {
   console.log("zone", zone)
@@ -74,13 +42,18 @@ function sfhInfo(sfh) {
   console.log("sfh", sfh)
 }
 
-const {draftSmartFurnitureHookup, startDrawing, cancelDrawing, isPositioned,positionNewSFH, isDrawing, finalizeHookup}
+const {
+  draftSmartFurnitureHookup, startDrawing, cancelDrawing,
+  loadSmartFurnitureHookupForEdit,
+  isPositioned, positionNewSFH, resetDraft, finalizeHookup
+}
     = useSmartFurnitureHookupDrawing()
 
 function onStartDrawing() {
   mapStore.startDrawing()
   startDrawing()
 }
+
 function onCancelDrawing() {
   mapStore.viewMap()
   cancelDrawing()
@@ -90,7 +63,7 @@ function onCancelDrawing() {
 const dialogMode = ref(null)
 const showSmartFurnitureHookupDialog = ref(false)
 
-function setupNewSmartFurnitureHookup(){
+function setupNewSmartFurnitureHookup() {
   dialogMode.value = 'create'
   showSmartFurnitureHookupDialog.value = true
   draftSmartFurnitureHookup.value.endpoint = "http://127.0.0.1:8000/api/wave-nodes/electric-oven"
@@ -98,15 +71,14 @@ function setupNewSmartFurnitureHookup(){
 
 const endpointLoading = ref(false)
 
-async function fetchSmartFurnitureHookupInfo(){
+async function fetchSmartFurnitureHookupInfo() {
   endpointLoading.value = true
   try {
     const response = await axios.get(draftSmartFurnitureHookup.value.endpoint);
     draftSmartFurnitureHookup.value.name = response.data.name
     draftSmartFurnitureHookup.value.utilityType = response.data.node_type
   } catch (error) {
-  }
-  finally {
+  } finally {
     endpointLoading.value = false
   }
 }
@@ -129,13 +101,14 @@ const dragState = ref({
   startPosition: null
 })
 
-function startDragHookup(hookup, position){
+function startDragHookup(hookup, position) {
   dragState.value = {
     isDragging: true,
     hookup: hookup,
-    startPosition: { ...position }
+    startPosition: {...position}
   }
 }
+
 function handleDragMove(currentPosition) {
   if (!dragState.value.isDragging || !dragState.value.startPosition) {
     return
@@ -147,15 +120,13 @@ function handleDragMove(currentPosition) {
   dragState.value.hookup.position.x += dx
   dragState.value.hookup.position.y += dy
 
-  dragState.value.startPosition = { ...currentPosition }
+  dragState.value.startPosition = {...currentPosition}
 }
 
 function stopDrag() {
-  if(!dragState.value.isDragging) return
-  if(mapStore.isEditMode) {
+  if (!dragState.value.isDragging) return
 
-    console.log("calc new zone")
-
+  if (mapStore.isEditMode) {
     dragState.value.hookup.zone = findZoneForHookup(dragState.value.hookup)
   }
 
@@ -168,10 +139,11 @@ function stopDrag() {
 
   //
 }
+
 const existingZones = computed(() => mapStore.zones)
 const {findZoneForHookup} = useHookupZoneDetection(existingZones)
 
-function onSaveHookup(){
+function onSaveHookup() {
   const name = draftSmartFurnitureHookup.value.name.trim()
   const endpoint = draftSmartFurnitureHookup.value.endpoint.trim()
   const utilityType = draftSmartFurnitureHookup.value.utilityType
@@ -194,13 +166,20 @@ function onSaveHookup(){
     const smartFurnitureHookup = finalizeHookup(zone)
     mapStore.addSmartFurnitureHookup(smartFurnitureHookup)
 
-    // Complete onboarding step if first zone
-    if (mapStore.zoneCount === 1) {
+    if (mapStore.smartFurnitureHookupsCount > 1) {
       onboardingStore.completeStep()
     }
 
     cancelDrawing()
 
+  } else if (dialogMode.value === 'edit') {
+    mapStore.updateSmartFurnitureHookup(draftSmartFurnitureHookup.value.id, {
+      name: name,
+      endpoint: draftSmartFurnitureHookup.value.endpoint,
+      utilityType: draftSmartFurnitureHookup.value.utilityType
+    })
+
+    resetDraft()
   }
 
   showSmartFurnitureHookupDialog.value = false
@@ -215,6 +194,53 @@ function onStartEditing() {
 function onStopEditing() {
   mapStore.viewMap()
 }
+
+function onEditHookup(smartFurnitureHookupId) {
+  const smartFurnitureHookup = mapStore.findSmartFurnitureHookup(smartFurnitureHookupId)
+
+  if (!smartFurnitureHookup) return
+
+  loadSmartFurnitureHookupForEdit(smartFurnitureHookup)
+
+  dialogMode.value = 'edit'
+  showSmartFurnitureHookupDialog.value = true
+}
+
+const confirm = useConfirm()
+const toast = useToast()
+
+function onDeleteHookup(smartFurnitureHookupId) {
+  confirm.require({
+    message: 'Are you sure you want to delete this smart furniture hookup?',
+    header: 'Delete smart furniture hookup',
+    icon: 'pi pi-info-circle',
+    rejectLabel: 'Cancel',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true
+    },
+    acceptProps: {
+      label: 'Delete',
+      severity: 'danger'
+    },
+    accept: () => {
+      mapStore.deleteSmartFurnitureHookup(smartFurnitureHookupId)
+
+      if (mapStore.smartFurnitureHookupsCount === 0) {
+        onboardingStore.uncompleteStep()
+      }
+
+      toast.add({
+        severity: 'info',
+        summary: 'Deleted',
+        detail: 'Smart furniture hookup deleted successfully',
+        life: 3000
+      })
+    }
+  })
+}
+
 </script>
 
 <template>
@@ -316,6 +342,7 @@ function onStopEditing() {
 
 
           <Tree :value="tree"
+                v-model:expandedKeys="expandedKeys"
                 class="!p-0 !m-0"
                 selectionMode="single"
                 :pt="{
@@ -343,23 +370,6 @@ function onStopEditing() {
                   />
                   <b>{{ slotProps.node.label }} - zone</b>
                 </div>
-                <div class="flex flex-row bg-yellow-100">
-                  <Button
-                      icon="pi pi-pen-to-square"
-                      variant="text"
-                      rounded
-                      aria-label="Edit"
-                      @click="zoneInfo(slotProps.node.id)"
-                  />
-                  <Button
-                      icon="pi pi-trash"
-                      severity="danger"
-                      variant="text"
-                      rounded
-                      aria-label="Delete"
-                      @click=""
-                  />
-                </div>
               </div>
             </template>
             <template #smart-furniture-hookup="slotProps">
@@ -377,7 +387,7 @@ function onStopEditing() {
                       variant="text"
                       rounded
                       aria-label="Edit"
-                      @click="sfhInfo(slotProps.node.id)"
+                      @click="onEditHookup(slotProps.node.id)"
                   />
                   <Button
                       icon="pi pi-trash"
@@ -385,7 +395,7 @@ function onStopEditing() {
                       variant="text"
                       rounded
                       aria-label="Delete"
-                      @click=""
+                      @click="onDeleteHookup(slotProps.node.id)"
                   />
                 </div>
               </div>
@@ -401,25 +411,31 @@ function onStopEditing() {
       modal
       :header="dialogMode === 'create' ? 'Create new smart furniture hookup' : 'Edit smart furniture hookup'"
       :style="{ width: '35rem' }"
+      @hide="()=> {
+        resetDraft()
+      }"
   >
     <span class="text-surface-500 dark:text-surface-400 block mb-8">
       Smart furniture hookup information
     </span>
 
     <div class="grid grid-cols-12 gap-2 mb-4">
-      <label for="smartFurnitureHookupEndpoint" class="flex items-center col-span-12 md:col-span-2 md:mb-0 font-semibold">Endpoint</label>
+      <label for="smartFurnitureHookupEndpoint"
+             class="flex items-center col-span-12 md:col-span-2 md:mb-0 font-semibold">Endpoint</label>
       <div class="col-span-12 md:col-span-10 w-full flex space-x-4">
         <InputText id="smartFurnitureHookupEndpoint" autocomplete="off" type="text" class="w-full"
                    v-model="draftSmartFurnitureHookup.endpoint"
                    :invalid="!draftSmartFurnitureHookup.endpoint"
         />
         <Button :disabled="!draftSmartFurnitureHookup.endpoint" :loading="endpointLoading"
-                icon="pi pi-link" aria-label="Connect" class="col-span-12 md:col-span-10" @click="fetchSmartFurnitureHookupInfo"/>
+                icon="pi pi-link" aria-label="Connect" class="col-span-12 md:col-span-10"
+                @click="fetchSmartFurnitureHookupInfo"/>
       </div>
       <Message class="col-span-12"
-          v-show="!draftSmartFurnitureHookup.endpoint" severity="error" variant="simple" size="small">Endpoint is required</Message>
+               v-show="!draftSmartFurnitureHookup.endpoint" severity="error" variant="simple" size="small">Endpoint is
+        required
+      </Message>
     </div>
-
 
 
     <div class="grid grid-cols-12 gap-2 mb-4">
@@ -431,17 +447,23 @@ function onStopEditing() {
         />
       </div>
       <Message class="col-span-12"
-               v-show="!draftSmartFurnitureHookup.name" severity="error" variant="simple" size="small">Name is required</Message>
+               v-show="!draftSmartFurnitureHookup.name" severity="error" variant="simple" size="small">Name is required
+      </Message>
     </div>
 
     <div class="grid grid-cols-12 gap-2 mb-4">
-      <label for="smartFurnitureHookupUtilityType" class="flex items-center col-span-12 md:col-span-2 md:mb-0 font-semibold">Utility type</label>
+      <label for="smartFurnitureHookupUtilityType"
+             class="flex items-center col-span-12 md:col-span-2 md:mb-0 font-semibold">Utility type</label>
       <div class="col-span-12 md:col-span-10 w-full flex space-x-4">
-        <Select v-model="draftSmartFurnitureHookup.utilityType" class="w-full" :invalid="!draftSmartFurnitureHookup.utilityType"
-                :options="Object.values(UtilityType)" id="smartFurnitureHookupUtilityType" placeholder="Select a utility type" />
+        <Select v-model="draftSmartFurnitureHookup.utilityType" class="w-full"
+                :invalid="!draftSmartFurnitureHookup.utilityType"
+                :options="Object.values(UtilityType)" id="smartFurnitureHookupUtilityType"
+                placeholder="Select a utility type"/>
       </div>
       <Message class="col-span-12"
-               v-show="!draftSmartFurnitureHookup.utilityType" severity="error" variant="simple" size="small">Utility type is required</Message>
+               v-show="!draftSmartFurnitureHookup.utilityType" severity="error" variant="simple" size="small">Utility
+        type is required
+      </Message>
     </div>
 
 
@@ -450,7 +472,10 @@ function onStopEditing() {
           type="button"
           label="Cancel"
           severity="secondary"
-          @click="showSmartFurnitureHookupDialog = false"
+          @click="()=>{
+            showSmartFurnitureHookupDialog = false
+            resetDraft()
+          }"
       />
       <Button
           type="button"

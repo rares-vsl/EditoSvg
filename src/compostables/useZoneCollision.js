@@ -24,6 +24,23 @@ export function useZoneCollision() {
         return inside
     }
 
+    function pointWithRadiusInPolygon(point, radius, polygon) {
+        const offsets = [
+            { x: 0, y: 0 },
+            { x: radius, y: 0 },
+            { x: -radius, y: 0 },
+            { x: 0, y: radius },
+            { x: 0, y: -radius }
+        ]
+
+        return offsets.some(o =>
+            isPointInPolygon(
+                { x: point.x + o.x, y: point.y + o.y },
+                polygon
+            )
+        )
+    }
+
     /**
      * Check if two line segments intersect
      */
@@ -205,6 +222,7 @@ export function useZoneCollision() {
         isPointInPolygon,
         doPolygonsIntersect,
         doesPolygonContainPolygon,
+        pointWithRadiusInPolygon,
 
         canAddPoint,
         canCreateZone,

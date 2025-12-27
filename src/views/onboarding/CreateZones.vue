@@ -6,17 +6,19 @@ import Dialog from "primevue/dialog"
 import { useOnboardingStore } from '@/stores/onboarding'
 import { useInteractiveMap } from '@/stores/interactiveMap'
 
-
 import FloorPlan from "@/components/Map/FloorPlan.vue"
 import ZoneSvg from "@/components/Map/ZoneSvg.vue"
 import {useZoneDrawing} from "@/compostables/useZoneDrawing.js";
 import {useZoneDrag} from "@/compostables/useZoneDrag.js";
+import SmartFurnitureHookup from "@/components/Map/SmartFurnitureHookup.vue";
+import {useFloorPlanTree} from "@/compostables/floorPlanTree.js";
 
 // Stores
 const onboardingStore = useOnboardingStore()
 const mapStore = useInteractiveMap()
 
 const existingZones = computed(() => mapStore.zones)
+const existingSmartFurnitureHookups = computed(() => mapStore.smartFurnitureHookups)
 
 const {
   draftZone,
@@ -171,6 +173,9 @@ function onSaveZone() {
 }
 
 
+const tree = computed(() =>
+    useFloorPlanTree(mapStore.zones, mapStore.smartFurnitureHookups)
+);
 // ======================
 // Drag Actions
 // ======================
@@ -180,7 +185,7 @@ const {
       startDragVertex,
       handleDragMove,
       stopDrag
-} = useZoneDrag(existingZones)
+} = useZoneDrag(existingZones, existingSmartFurnitureHookups)
 
 watch(collisionError, (error) => {
   if (error){
@@ -303,6 +308,13 @@ onMounted(() => {
                   :editModeActive="mapStore.isEditMode"
                   @zoneClick="startDragZone" @zoneVerticeClick="startDragVertex"
               />
+
+              <smart-furniture-hookup
+                  v-for="sfh in mapStore.smartFurnitureHookups"
+                  :key="sfh.id"
+                  :editModeActive="false"
+                  :smartFurnitureHookup="sfh"
+              />
             </floor-plan>
           </div>
         </div>
@@ -314,18 +326,26 @@ onMounted(() => {
             {{ mapStore.hasZones ? 'Manage your zones below' : 'No zones created yet' }}
           </p>
 
-          <Tree
-              v-if="mapStore.hasZones"
-              :value="mapStore.zoneTreeNodes"
-              class="!p-0 !m-0"
-              selectionMode="single"
-              :pt="{
+          <Tree :value="tree"
+                class="!p-0 !m-0"
+                selectionMode="single"
+                :pt="{
                 nodeLabel: {
                   class: '!w-full'
                 },
               }"
           >
             <template #default="slotProps">
+              <div class="flex flex-row space-x-2 items-center">
+                <div
+                    class="h-4 w-4 rounded-sm "
+                    :style="`background-color: ${slotProps.node.color}`"
+                />
+                <b>{{ slotProps.node.label }}</b>
+              </div>
+            </template>
+
+            <template #zone="slotProps">
               <div class="flex flex-row space-x-2 justify-between items-center flex-1">
                 <div class="flex flex-row space-x-2 items-center">
                   <div
@@ -350,6 +370,17 @@ onMounted(() => {
                       aria-label="Delete"
                       @click="onDeleteZone(slotProps.node.id)"
                   />
+                </div>
+              </div>
+            </template>
+            <template #smart-furniture-hookup="slotProps">
+              <div class="flex flex-row space-x-2 justify-between items-center flex-1">
+                <div class="flex flex-row space-x-2 items-center">
+                  <div
+                      class="h-4 w-4 rounded-lg "
+                      :style="`background-color: ${slotProps.node.isActive ? 'green' : 'gray'}`"
+                  />
+                  <b>{{ slotProps.node.label }}</b>
                 </div>
               </div>
             </template>

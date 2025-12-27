@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import {useZoneCollision} from "@/compostables/useZoneCollision.js";
 
-export function useZoneDrag(existingZones) {
+export function useZoneDrag(existingZones, existingSmartFurnitureHookups) {
 
     const dragState = ref({
         isDragging: false,
@@ -75,18 +75,35 @@ export function useZoneDrag(existingZones) {
                 point.x += dx
                 point.y += dy
             })
+
+            existingSmartFurnitureHookups.value.filter((sfh) => sfh.zone === dragState.value.zone.id).forEach((sfh) => {
+                sfh.position.x += dx
+                sfh.position.y += dy
+            })
         }
 
         dragState.value.startPosition = { ...currentPosition }
     }
 
     function stopDrag() {
+        if (!dragState.value.isDragging) return
+
+        for (const sfh of existingSmartFurnitureHookups.value) {
+
+            if (collision.pointWithRadiusInPolygon(sfh.position, 16,dragState.value.zone.points)) {
+                sfh.zone =  dragState.value.zone.id
+            } else if(sfh.zone === dragState.value.zone.id) {
+                sfh.zone = null
+            }
+        }
+
         dragState.value = {
             isDragging: false,
             zone: null,
             vertexIndex: null,
             startPosition: null
         }
+
     }
 
     return {

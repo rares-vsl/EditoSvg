@@ -46,9 +46,23 @@ export function useSmartFurnitureHookupDrawing() {
         }
     }
 
+    function loadSmartFurnitureHookupForEdit(smartFurnitureHookup) {
+        draftSmartFurnitureHookup.value = {
+            id: smartFurnitureHookup.id,
+            name: smartFurnitureHookup.name,
+            position: smartFurnitureHookup.position,
+            utilityType: smartFurnitureHookup.utilityType,
+            endpoint: smartFurnitureHookup.endpoint
+        }
+
+        isPositioned.value = true
+    }
+
     return {
         draftSmartFurnitureHookup,
         isPositioned,
+        resetDraft,
+        loadSmartFurnitureHookupForEdit,
         startDrawing,
         cancelDrawing,finalizeHookup,
         positionNewSFH

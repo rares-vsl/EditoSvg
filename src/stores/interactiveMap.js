@@ -88,17 +88,10 @@ export const useInteractiveMap = defineStore('interactiveMap', {
         ]
     }),
     getters: {
-        zoneTreeNodes: (state) => {
-            return state.zones.map((zone, index) => ({
-                key: index,
-                label: zone.name,
-                color: zone.color,
-                id: zone.id,
-            }))
-        },
         hasZones: (state) => state.zones.length > 0,
         hasSmartFurnitureHookups: (state) => state.smartFurnitureHookups.length > 0,
         zoneCount: (state) => state.zones.length,
+        smartFurnitureHookupsCount: (state) => state.smartFurnitureHookups.length,
         isViewMode: (state) => state.mode === MapMode.VIEW,
         isDrawMode: (state) => state.mode === MapMode.DRAW,
         isEditMode: (state) => state.mode === MapMode.EDIT
@@ -135,7 +128,20 @@ export const useInteractiveMap = defineStore('interactiveMap', {
         },
         addSmartFurnitureHookup(smartFurnitureHookup) {
             this.smartFurnitureHookups.push(smartFurnitureHookup)
-        }
+        },
+        findSmartFurnitureHookup(id) {
+            return this.smartFurnitureHookups.find(sfh => sfh.id === id)
+        },
+        updateSmartFurnitureHookup(id, updates) {
+            const index = this.smartFurnitureHookups.findIndex(sfh => sfh.id === id)
+
+            if (index !== -1) {
+                this.smartFurnitureHookups[index] = { ...this.smartFurnitureHookups[index], ...updates }
+            }
+        },
+        deleteSmartFurnitureHookup(id) {
+            this.smartFurnitureHookups = this.smartFurnitureHookups.filter(sfh => sfh.id !== id)
+        },
     },
     persist: true
 })
