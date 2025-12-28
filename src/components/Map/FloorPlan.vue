@@ -1,12 +1,9 @@
 <script setup>
-import {onMounted, ref} from "vue";
+import {computed, onMounted, ref} from "vue";
 import {getSvgViewBox} from '@/compostables/getSvgViewBox'
 import { provide  } from 'vue';
 
 const props = defineProps({
-  floorPlanSvgUrl: {
-    type: String
-  },
   floorPlanSvg: {
     type: String
   },
@@ -46,27 +43,45 @@ const svgMouseMove = (event) => {
   emit("floorPlanMouseMove", point);
 }
 
-const viewBox = ref(null);
-const svgContent = ref("")
+onMounted(() => {
 
-onMounted(async () => {
-  if(props.floorPlanSvgUrl)
-  {
-    const response = await fetch(props.floorPlanSvgUrl);
-    svgContent.value = await response.text();
-    viewBox.value = getSvgViewBox(svgContent.value);
-  }
-  else{
-    svgContent.value = props.floorPlanSvg;
-    viewBox.value = getSvgViewBox(svgContent.value);
-  }
 });
+
+const svgContent = computed(() => props.floorPlanSvg || "");
+const viewBox = computed(() => getSvgViewBox(svgContent.value));
 
 provide('floorPlan', {
   getSvgPoint,
   svgRef
 });
 
+
+const xxx = computed(()=> {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(props.floorPlanSvg, "image/svg+xml");
+  const svgEl = doc.querySelector("svg");
+
+  if (!svgEl) return null;
+
+  return svgEl;
+})
+
+const modifiedSvg = computed(() => {
+  if (!props.floorPlanSvg) return "";
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(props.floorPlanSvg, "image/svg+xml");
+  const svgEl = doc.querySelector("svg");
+
+  if (!svgEl) return props.floorPlanSvg;
+
+  // Set width and height to 100%
+  svgEl.setAttribute('width', '100%');
+  svgEl.setAttribute('height', '100%');
+
+  // Return the modified SVG as string
+  return new XMLSerializer().serializeToString(svgEl);
+});
 </script>
 
 <template>
@@ -80,9 +95,15 @@ provide('floorPlan', {
        @click="svgClick"
        @mousemove="svgMouseMove"
     >
-      <g v-html="svgContent"
-
+      <g v-html="modifiedSvg"
       />
+      <g>
+        <slot name="zones" />
+      </g>
+      <g>
+        <slot name="hookups" />
+      </g>
+
       <slot>
 
       </slot>

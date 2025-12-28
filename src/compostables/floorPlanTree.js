@@ -1,34 +1,31 @@
-export function useFloorPlanTree(zones, smartFurnitureHookups) {
-    const zoneNodes = zones.map((zone, index) => ({
-        key: index + 1,
-        label: zone.name,
-        color: zone.color,
-        id: zone.id,
-        type: "zone",
+function createZoneNode(zone, index, smartFurnitureHookups) {
+    return {
+        key: index,
+        label: zone?.name ?? "Floor plan",
+        ...(zone?.color && {color: zone.color}),
+        ...(zone?.id && {id: zone.id, type: "zone"}),
         children: smartFurnitureHookups
-            .filter((sfh) => sfh.zone === zone.id)
             .map((sfh, i) => ({
-                key: `${index + 1}-${i}`,
+                key: `${index}-${i}`,
                 id: sfh.id,
                 label: sfh.name,
                 isActive: sfh.isActive,
                 type: "smart-furniture-hookup",
             }))
-    }));
+    };
+}
 
-    zoneNodes.unshift({
-        key: 0,
-        label: "Floor plan",
-        children: smartFurnitureHookups
-            .filter((sfh) => sfh.zone === null)
-            .map((sfh, i) => ({
-                key: `${0}-${i}`,
-                id: sfh.id,
-                label: sfh.name,
-                isActive: sfh.isActive,
-                type: "smart-furniture-hookup",
-            })),
-    })
 
-    return zoneNodes
+export function useFloorPlanTree(zones, smartFurnitureHookups) {
+    if (zones.length === 0 && smartFurnitureHookups.length === 0) {
+        return [];
+    }
+
+    const floorPlanNode = createZoneNode(null, 0, smartFurnitureHookups
+        .filter((sfh) => sfh.zone === null));
+
+    const zoneNodes = zones.map((zone, index) => createZoneNode(zone, index + 1, smartFurnitureHookups
+        .filter((sfh) => sfh.zone === zone.id)));
+
+    return [floorPlanNode, ...zoneNodes];
 }

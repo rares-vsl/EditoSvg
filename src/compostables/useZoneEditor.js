@@ -1,22 +1,16 @@
-import { ref, computed } from 'vue'
-import { useZoneCollision } from './useZoneCollision'
+import {computed, ref} from 'vue'
+import {useZoneCollision} from './useZoneCollision'
 
-export function useZoneDrawing(existingZones) {
+export function useZoneEditor(existingZones) {
     const collision = useZoneCollision()
 
-    const draftZone = ref({
-        id: null,
-        name: "",
-        points: [],
-        color: "" // Default blue color
-    })
-
+    const draftZone = ref({})
     const isPolygonClosed = ref(false)
-    const isDrawing = ref(false)
-
-    const colorInput =  ref("3b82f6")
-
+    const colorInput = ref("")
     const collisionError = ref(null)
+
+    const zoneDialog = ref(false)
+    const currentMode = ref(null)
 
     const polygonPath = computed(() =>
         draftZone.value.points.map(p => `${p.x},${p.y}`).join(' ')
@@ -24,19 +18,34 @@ export function useZoneDrawing(existingZones) {
 
     const displayColor = computed(() => `#${colorInput.value}`)
 
-    // Start a new drawing session
+    const isZoneOnDrawMode = computed(() => currentMode.value === "create")
+    const isZoneOnEditMode = computed(() => currentMode.value === "edit")
+
+    function resetState() {
+        draftZone.value = {
+            id: null,
+            name: "",
+            points: [],
+            color: displayColor
+        }
+
+        colorInput.value = "3b82f6"
+        isPolygonClosed.value = false
+        collisionError.value = null
+
+        zoneDialog.value = false
+        currentMode.value = null
+    }
+
     function startDrawing() {
-        resetDraft()
-        isDrawing.value = true
+        resetState()
+        currentMode.value = "create"
     }
 
-    // Stop drawing and clear
-    function cancelDrawing() {
-        resetDraft()
-        isDrawing.value = false
+    function stopDrawing() {
+        resetState()
     }
 
-    // Add a point to the polygon
     function addPoint(point) {
         if (!point || isPolygonClosed.value) return
 
@@ -44,8 +53,9 @@ export function useZoneDrawing(existingZones) {
             point,
             existingZones.value
         )
+
+
         if (!pointValidation.valid) {
-            console.log("collision error")
             collisionError.value = pointValidation.reason
             return
         }
@@ -64,10 +74,12 @@ export function useZoneDrawing(existingZones) {
             }
 
             isPolygonClosed.value = true
+
             return
         }
 
-        draftZone.value.points.push({ x: point.x, y: point.y })
+        draftZone.value.points.push({x: point.x, y: point.y})
+        console.log(draftZone.value.points)
     }
 
     function findNearbyPoint(point, targetPoint) {
@@ -82,24 +94,22 @@ export function useZoneDrawing(existingZones) {
     }
 
     function finalizeZone() {
-        return {
+        const newZone = {
             id: Date.now().toString(),
             name: draftZone.value.name.trim(),
             points: [...draftZone.value.points],
             color: displayColor.value,
         }
+
+        resetState()
+        currentMode.value = "create"
+
+        return newZone
     }
 
-    function resetDraft() {
-        draftZone.value = {
-            id: null,
-            name: "",
-            points: [],
-            color: displayColor
-        }
-        colorInput.value =  "3b82f6"
-        isPolygonClosed.value = false
-        collisionError.value = null
+    function goToSetup() {
+        zoneDialog.value = true
+        currentMode.value = "create"
     }
 
     function loadZoneForEdit(zone) {
@@ -110,8 +120,20 @@ export function useZoneDrawing(existingZones) {
             color: zone.color
         }
         isPolygonClosed.value = true
-        isDrawing.value = false
-        colorInput.value = zone.color
+        colorInput.value = zone.color.replace('#', '')
+
+        zoneDialog.value = true
+        currentMode.value = "edit"
+    }
+
+    function hideZoneDialog(){
+        if (isZoneOnEditMode.value){
+            resetState()
+        }
+    }
+
+    function doneEditingZone() {
+        resetState()
     }
 
     return {
@@ -119,17 +141,21 @@ export function useZoneDrawing(existingZones) {
         draftZone,
         colorInput,
         isPolygonClosed,
-        isDrawing,
         polygonPath,
         displayColor,
         collisionError,
+        zoneDialog,
+        isZoneOnDrawMode,
+        isZoneOnEditMode,
 
         // Actions
         startDrawing,
-        cancelDrawing,
+        stopDrawing,
+        doneEditingZone,
         addPoint,
         finalizeZone,
-        resetDraft,
-        loadZoneForEdit
+        goToSetup,
+        loadZoneForEdit,
+        hideZoneDialog
     }
 }

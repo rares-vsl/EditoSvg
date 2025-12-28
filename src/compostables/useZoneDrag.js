@@ -37,6 +37,7 @@ export function useZoneDrag(existingZones, existingSmartFurnitureHookups) {
 
         const dx = currentPosition.x - dragState.value.startPosition.x
         const dy = currentPosition.y - dragState.value.startPosition.y
+
         let validation
 
         if (dragState.value.vertexIndex !== null) {
@@ -76,10 +77,14 @@ export function useZoneDrag(existingZones, existingSmartFurnitureHookups) {
                 point.y += dy
             })
 
-            existingSmartFurnitureHookups.value.filter((sfh) => sfh.zone === dragState.value.zone.id).forEach((sfh) => {
-                sfh.position.x += dx
-                sfh.position.y += dy
-            })
+            // Prevent attaching hookups to a non-final zone
+            if (dragState.value.zone.id)
+            {
+                existingSmartFurnitureHookups.value.filter((sfh) => sfh.zone === dragState.value.zone.id).forEach((sfh) => {
+                    sfh.position.x += dx
+                    sfh.position.y += dy
+                })
+            }
         }
 
         dragState.value.startPosition = { ...currentPosition }
@@ -89,10 +94,9 @@ export function useZoneDrag(existingZones, existingSmartFurnitureHookups) {
         if (!dragState.value.isDragging) return
 
         for (const sfh of existingSmartFurnitureHookups.value) {
-
-            if (collision.pointWithRadiusInPolygon(sfh.position, 16,dragState.value.zone.points)) {
+            if (collision.isPointInPolygon(sfh.position, dragState.value.zone.points)) {
                 sfh.zone =  dragState.value.zone.id
-            } else if(sfh.zone === dragState.value.zone.id) {
+            } else if(sfh.zone && sfh.zone === dragState.value.zone.id) {
                 sfh.zone = null
             }
         }

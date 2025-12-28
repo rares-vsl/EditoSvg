@@ -46,6 +46,10 @@ export const useOnboardingStore = defineStore('onboarding', {
         },
     },
     actions: {
+        reset(){
+            this.maxAccessibleStep = 1
+            this.completedSteps = []
+        },
         setCurrentStep(step) {
             if (step <= this.maxAccessibleStep) {
                 this.currentStep = step

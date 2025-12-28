@@ -1,6 +1,5 @@
 import {useZoneCollision} from "@/compostables/useZoneCollision.js";
 
-
 export function useHookupZoneDetection(existingZones) {
     const collision = useZoneCollision()
 
@@ -15,8 +14,7 @@ export function useHookupZoneDetection(existingZones) {
                 return zone.id
             }
         }
-
-        console.log("no zone")
+        
         return null
 
     }
@@ -24,6 +22,4 @@ export function useHookupZoneDetection(existingZones) {
     return {
         findZoneForHookup
     }
-
-
 }

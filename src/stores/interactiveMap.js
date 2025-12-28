@@ -88,18 +88,22 @@ export const useInteractiveMap = defineStore('interactiveMap', {
         ]
     }),
     getters: {
+        isViewMode: (state) => state.mode === MapMode.VIEW,
+        isDrawMode: (state) => state.mode === MapMode.DRAW,
+        isEditMode: (state) => state.mode === MapMode.EDIT,
         hasZones: (state) => state.zones.length > 0,
         hasSmartFurnitureHookups: (state) => state.smartFurnitureHookups.length > 0,
         zoneCount: (state) => state.zones.length,
-        smartFurnitureHookupsCount: (state) => state.smartFurnitureHookups.length,
-        isViewMode: (state) => state.mode === MapMode.VIEW,
-        isDrawMode: (state) => state.mode === MapMode.DRAW,
-        isEditMode: (state) => state.mode === MapMode.EDIT
+        smartFurnitureHookupsCount: (state) => state.smartFurnitureHookups.length
     },
     actions: {
         uploadSvg(file, filename) {
             this.svgDataUrl = file
             this.svgFileName = filename
+        },
+        resetMap(){
+            this.zones = []
+            this.smartFurnitureHookups = []
         },
         startDrawing() {
             this.mode = MapMode.DRAW
@@ -117,6 +121,7 @@ export const useInteractiveMap = defineStore('interactiveMap', {
             this.zones.push(zone)
         },
         updateZone(id, updates) {
+            console.log(updates)
             const index = this.zones.findIndex(zone => zone.id === id)
 
             if (index !== -1) {
@@ -125,6 +130,10 @@ export const useInteractiveMap = defineStore('interactiveMap', {
         },
         deleteZone(id) {
             this.zones = this.zones.filter(zone => zone.id !== id)
+
+            this.smartFurnitureHookups.filter(sfh => sfh.zone === id).forEach((sfh) => {
+                sfh.zone = null
+            })
         },
         addSmartFurnitureHookup(smartFurnitureHookup) {
             this.smartFurnitureHookups.push(smartFurnitureHookup)
